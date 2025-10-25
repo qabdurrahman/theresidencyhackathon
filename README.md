@@ -132,6 +132,21 @@ Displayed data includes:
 
 ---
 
+## Deployed Contracts (Sepolia)
+
+All deployed to the Sepolia testnet:
+
+- **ChainlinkOracle (mock NVDA/USD)**  
+  Address: `0x80A697C81894CFf34702E50819Ef8627C59f679A`
+
+- **EquiAsset (eNVDA token)**  
+  Address: `0x150881a3d45acEC4760099E666015FbEEf4690C5`
+
+- **EquiVault (vault & core logic)**  
+  Address: `0xC9B4D81b82B03539be906E3E214E277b91677906`
+
+---
+
 ## Example Flow
 
 1. User deposits 1 ETH (~$3,000)  
