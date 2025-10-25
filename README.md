@@ -1,80 +1,278 @@
-# 🏗 Scaffold-ETH 2
+# EquiNVDA Protocol
 
-<h4 align="center">
-  <a href="https://docs.scaffoldeth.io">Documentation</a> |
-  <a href="https://scaffoldeth.io">Website</a>
-</h4>
+A DeFi-style synthetic asset protocol that allows users to mint, trade, and redeem synthetic NVDA tokens (EquiNVDA) backed by ETH collateral on Sepolia testnet.
 
-🧪 An open-source, up-to-date toolkit for building decentralized applications (dapps) on the Ethereum blockchain. It's designed to make it easier for developers to create and deploy smart contracts and build user interfaces that interact with those contracts.
+## 🏗️ Architecture
 
-⚙️ Built using NextJS, RainbowKit, Foundry, Wagmi, Viem, and Typescript.
+### Core Contracts
 
-- ✅ **Contract Hot Reload**: Your frontend auto-adapts to your smart contract as you edit it.
-- 🪝 **[Custom hooks](https://docs.scaffoldeth.io/hooks/)**: Collection of React hooks wrapper around [wagmi](https://wagmi.sh/) to simplify interactions with smart contracts with typescript autocompletion.
-- 🧱 [**Components**](https://docs.scaffoldeth.io/components/): Collection of common web3 components to quickly build your frontend.
-- 🔥 **Burner Wallet & Local Faucet**: Quickly test your application with a burner wallet and local faucet.
-- 🔐 **Integration with Wallet Providers**: Connect to different wallet providers and interact with the Ethereum network.
+#### 1. EquiVault.sol
 
-![Debug Contracts tab](https://github.com/scaffold-eth/scaffold-eth-2/assets/55535804/b237af0c-5027-4849-a5c1-2e31495cccb1)
+The main contract managing ETH collateral deposits, synthetic token minting, redemption, and liquidations.
 
-## Requirements
+**Key Features:**
 
-Before you begin, you need to install the following tools:
+- **Collateral Management**: Users deposit ETH as collateral
+- **Synthetic Token Minting**: Mint eNVDA tokens based on collateral value with 500% minimum collateral ratio
+- **Redemption**: Burn synthetic tokens to redeem ETH collateral
+- **Liquidation**: Third-party liquidation of under-collateralized positions
+- **Collateralization Rules**:
+  - Minimum Collateral Ratio (CR): 500%
+  - Liquidation threshold: 130%
+  - Liquidation penalty: 10% (reward to liquidator)
 
-- [Node (>= v20.18.3)](https://nodejs.org/en/download/)
-- Yarn ([v1](https://classic.yarnpkg.com/en/docs/install/) or [v2+](https://yarnpkg.com/getting-started/install))
-- [Git](https://git-scm.com/downloads)
+#### 2. EquiAsset.sol
 
-## Quickstart
+ERC20 token contract for EquiNVDA synthetic asset.
 
-To get started with Scaffold-ETH 2, follow the steps below:
+**Features:**
 
-1. Install dependencies if it was skipped in CLI:
+- Symbol: `eNVDA`
+- Name: `EquiNVDA`
+- Mintable and burnable only by the EquiVault contract
+- Standard ERC20 functionality
+
+#### 3. ChainlinkOracle.sol
+
+Oracle contract providing price feeds for both ETH/USD and NVDA/USD.
+
+**Features:**
+
+- **ETH/USD Feed**: Real Chainlink price feed on Sepolia (`0x694AA1769357215DE4FAC081bf1f309aDC325306`)
+- **NVDA/USD Feed**: Mock price feed (configurable, starts at $450)
+- **Price Management**: Owner can update mock NVDA price
+- **Price Fluctuation**: Optional simulation of price changes
+
+## 🔧 Oracle Setup
+
+### ETH/USD Feed (Real Chainlink)
+
+- **Address**: `0x694AA1769357215DE4FAC081bf1f309aDC325306`
+- **Network**: Sepolia testnet
+- **Purpose**: Collateral valuation
+
+### NVDA/USD Feed (Mock Oracle)
+
+- **Initial Price**: $450 (8 decimals)
+- **Management**: Owner-controlled price updates
+- **Purpose**: Synthetic token valuation
+
+## 💰 Collateral & Minting Logic
+
+### Collateral Ratio Calculation
 
 ```
-cd my-dapp-example
-yarn install
+Collateral Ratio = (Collateral Value in USD) / (Debt Value in USD) × 100%
+
+Where:
+- Collateral Value = ETH_deposited × ETH/USD_price
+- Debt Value = minted_EquiNVDA × NVDA/USD_price
 ```
 
-2. Run a local network in the first terminal:
+### Minting Logic
+
+Instead of minting the requested number of tokens, the contract mints proportionally based on collateral value:
 
 ```
-yarn chain
+mintableAmount = (collateralValueInUSD / NVDA_price) / 5  // for 500% CR
 ```
 
-This command starts a local Ethereum network using Foundry. The network runs on your local machine and can be used for testing and development. You can customize the network configuration in `packages/foundry/foundry.toml`.
+### Liquidation Logic
 
-3. On a second terminal, deploy the test contract:
+- **Trigger**: When user's CR < 130%
+- **Process**: Liquidator repays user's debt in exchange for collateral
+- **Reward**: Liquidator receives 10% extra collateral as penalty
+- **Remaining**: Any remaining collateral returned to the user
 
+## 🧪 Testing
+
+The protocol includes comprehensive Foundry tests covering:
+
+### Test Coverage
+
+- ✅ Successful mint under 500% CR
+- 🚫 Revert on attempted mint beyond 500% CR
+- 🔁 Oracle mock price update and correct price fetching
+- ⚠️ Liquidation when CR < 130%
+- 💰 Correct liquidation penalty and reward distribution
+- 🔄 End-to-end flow: Deposit → Mint → Mock price drop → Liquidation → Redemption
+
+### Running Tests
+
+```bash
+# Compile contracts
+forge build
+
+# Run all tests
+forge test
+
+# Run tests with verbose output
+forge test -vvv
 ```
-yarn deploy
-```
 
-This command deploys a test smart contract to the local network. The contract is located in `packages/foundry/contracts` and can be modified to suit your needs. The `yarn deploy` command uses the deploy script located in `packages/foundry/script` to deploy the contract to the network. You can also customize the deploy script.
+### Test Scenarios
 
-4. On a third terminal, start your NextJS app:
+1. **Basic Operations**: Deposit, mint, redeem, withdraw
+2. **Collateral Ratio Enforcement**: Tests minimum CR requirements
+3. **Liquidation Mechanics**: Price drop scenarios and liquidation execution
+4. **Oracle Integration**: Mock price updates and Chainlink feed integration
+5. **Edge Cases**: Error conditions and boundary testing
 
-```
-yarn start
-```
+## 🚀 Deployment
 
-Visit your app on: `http://localhost:3000`. You can interact with your smart contract using the `Debug Contracts` page. You can tweak the app config in `packages/nextjs/scaffold.config.ts`.
+### Prerequisites
 
-Run smart contract test with `yarn foundry:test`
+- Foundry installed
+- Sepolia testnet access
+- ETH for gas fees
 
-- Edit your smart contracts in `packages/foundry/contracts`
-- Edit your frontend homepage at `packages/nextjs/app/page.tsx`. For guidance on [routing](https://nextjs.org/docs/app/building-your-application/routing/defining-routes) and configuring [pages/layouts](https://nextjs.org/docs/app/building-your-application/routing/pages-and-layouts) checkout the Next.js documentation.
-- Edit your deployment scripts in `packages/foundry/script`
+### Deployment Steps
 
+1. **Deploy ChainlinkOracle**:
 
-## Documentation
+   ```solidity
+   ChainlinkOracle oracle = new ChainlinkOracle(
+       ETH_USD_FEED_ADDRESS,  // 0x694AA1769357215DE4FAC081bf1f309aDC325306
+       INITIAL_NVDA_PRICE     // 450e8 ($450)
+   );
+   ```
 
-Visit our [docs](https://docs.scaffoldeth.io) to learn how to start building with Scaffold-ETH 2.
+2. **Deploy EquiAsset**:
 
-To know more about its features, check out our [website](https://scaffoldeth.io).
+   ```solidity
+   EquiAsset equiAsset = new EquiAsset();
+   ```
 
-## Contributing to Scaffold-ETH 2
+3. **Deploy EquiVault**:
 
-We welcome contributions to Scaffold-ETH 2!
+   ```solidity
+   EquiVault vault = new EquiVault(
+       address(equiAsset),
+       address(oracle)
+   );
+   ```
 
-Please see [CONTRIBUTING.MD](https://github.com/scaffold-eth/scaffold-eth-2/blob/main/CONTRIBUTING.md) for more information and guidelines for contributing to Scaffold-ETH 2.
+4. **Set Vault in Token Contract**:
+   ```solidity
+   equiAsset.setVault(address(vault));
+   ```
+
+## 📊 Usage Examples
+
+### Basic User Flow
+
+1. **Deposit Collateral**:
+
+   ```solidity
+   vault.depositCollateral{value: 1 ether}();
+   ```
+
+2. **Mint Synthetic Tokens**:
+
+   ```solidity
+   vault.mintEquiNVDA(8e17); // Mint 0.8 eNVDA tokens
+   ```
+
+3. **Check Vault Status**:
+
+   ```solidity
+   (uint256 collateral, uint256 debt, uint256 ratio, bool exists) = vault.getVaultData(user);
+   ```
+
+4. **Redeem Tokens**:
+
+   ```solidity
+   vault.redeemCollateral(4e17); // Redeem 0.4 eNVDA tokens
+   ```
+
+5. **Withdraw Collateral**:
+   ```solidity
+   vault.withdrawCollateral(0.5 ether);
+   ```
+
+### Liquidation Flow
+
+1. **Check Liquidation Eligibility**:
+
+   ```solidity
+   uint256 ratio = vault.getCollateralRatio(user);
+   bool liquidatable = ratio < vault.LIQUIDATION_THRESHOLD();
+   ```
+
+2. **Execute Liquidation**:
+   ```solidity
+   vault.liquidate(user);
+   ```
+
+## 🔗 Frontend Integration
+
+The protocol is designed to integrate seamlessly with Scaffold-ETH frontend:
+
+### React Hooks Needed
+
+- `depositCollateral()`
+- `mintEquiNVDA()`
+- `redeemCollateral()`
+- `liquidate(address user)`
+- `getCollateralRatio(address user)`
+- `getLatestPrice()` from both oracles
+
+### Frontend Features
+
+- Real-time NVDA/USD mock price display
+- ETH/USD live price (Chainlink)
+- User's collateral ratio and vault health
+- Liquidation button for vaults <130% CR
+- Network: Sepolia (ETH) via MetaMask
+
+## 📈 Economic Model
+
+### Collateralization
+
+- **Minimum CR**: 500% ensures high safety margin
+- **Liquidation Threshold**: 130% prevents bad debt
+- **Liquidation Penalty**: 10% incentivizes liquidators
+
+### Price Discovery
+
+- **ETH Price**: Real market data via Chainlink
+- **NVDA Price**: Synthetic/mock price for testing
+- **Risk Management**: Over-collateralization protects against volatility
+
+## 🛡️ Security Features
+
+- **ReentrancyGuard**: Prevents reentrancy attacks
+- **Ownable**: Admin controls for oracle management
+- **Input Validation**: Comprehensive parameter checking
+- **Collateral Ratio Enforcement**: Automatic liquidation triggers
+- **Access Control**: Vault-only token minting/burning
+
+## 📝 Contract Addresses (Sepolia)
+
+_Note: These are example addresses - replace with actual deployed addresses_
+
+- **EquiVault**: `0x...`
+- **EquiAsset**: `0x...`
+- **ChainlinkOracle**: `0x...`
+- **ETH/USD Feed**: `0x694AA1769357215DE4FAC081bf1f309aDC325306`
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Ensure all tests pass
+6. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## ⚠️ Disclaimer
+
+This is a demonstration protocol for educational purposes. The mock NVDA price feed is not connected to real market data and should not be used for actual trading or investment decisions.
+
+---
+
+**Built with ❤️ using Foundry and Scaffold-ETH**

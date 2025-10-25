@@ -5,6 +5,92 @@
 import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 
 const deployedContracts = {
+  11155111: {
+    EquiVault: {
+      address: "0xC9B4D81b82B03539be906E3E214E277b91677906",
+      abi: [
+        {
+          type: "constructor",
+          inputs: [
+            { name: "_equiAsset", type: "address", internalType: "address" },
+            { name: "_oracle", type: "address", internalType: "address" }
+          ],
+          stateMutability: "nonpayable"
+        },
+        {
+          type: "function",
+          name: "depositCollateral",
+          inputs: [],
+          outputs: [],
+          stateMutability: "payable"
+        },
+        {
+          type: "function",
+          name: "mintEquiNVDA",
+          inputs: [{ name: "amount", type: "uint256", internalType: "uint256" }],
+          outputs: [],
+          stateMutability: "nonpayable"
+        },
+        {
+          type: "function",
+          name: "getVaultData",
+          inputs: [{ name: "user", type: "address", internalType: "address" }],
+          outputs: [
+            { name: "collateralBalance", type: "uint256", internalType: "uint256" },
+            { name: "debtAmount", type: "uint256", internalType: "uint256" },
+            { name: "collateralRatio", type: "uint256", internalType: "uint256" },
+            { name: "exists", type: "bool", internalType: "bool" }
+          ],
+          stateMutability: "view"
+        }
+      ],
+      inheritedFunctions: {},
+      deployedOnBlock: 9487398
+    },
+    EquiAsset: {
+      address: "0x150881a3d45acEC4760099E666015FbEEf4690C5",
+      abi: [
+        {
+          type: "constructor",
+          inputs: [],
+          stateMutability: "nonpayable"
+        },
+        {
+          type: "function",
+          name: "balanceOf",
+          inputs: [{ name: "account", type: "address", internalType: "address" }],
+          outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
+          stateMutability: "view"
+        }
+      ],
+      inheritedFunctions: {},
+      deployedOnBlock: 9487398
+    },
+    ChainlinkOracle: {
+      address: "0x80A697C81894CFf34702E50819Ef8627C59f679A",
+      abi: [
+        {
+          type: "function",
+          name: "getEthUsdPrice",
+          inputs: [],
+          outputs: [
+            { name: "price", type: "int256", internalType: "int256" },
+            { name: "timestamp", type: "uint256", internalType: "uint256" }
+          ],
+          stateMutability: "view"
+        },
+        {
+          type: "function",
+          name: "getNvdaUsdPrice",
+          inputs: [],
+          outputs: [{ name: "", type: "int256", internalType: "int256" }],
+          stateMutability: "view"
+        }
+      ],
+      inheritedFunctions: {},
+      deployedOnBlock: 9487398
+    }
+  },
   31337: {
     YourContract: {
       address: "0x700b6a60ce7eaaea56f065753d8dcb9653dbad35",
